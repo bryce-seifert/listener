@@ -1,0 +1,43 @@
+{
+	"Icons": [
+	  {
+		"ID": 1,
+		"Path": "%ICONDIR%/icon.ico"
+	  }
+	],
+	"Manifest": {
+	  "ID": 1,
+	  "Path": "manifest.xml"
+	},
+	"VersionInfos": [
+	  {
+		"ID": 1,
+		"Fixed": {
+		  "FileVersion": "%VERSION%",
+		  "ProductVersion": "%VERSION%"
+		},
+		"StringTables": [
+		  {
+			"Language": "0409",
+			"Charset": "04b0",
+			"Strings": {
+			  "CompanyName": "Bitfocus AS",
+			  "FileDescription": "Bitfocus Listener",
+			  "FileVersion": "%VERSION%",
+			  "InternalName": "%FILENAME%",
+			  "LegalCopyright": "Copyright (c) Bitfocus AS, %COPYRIGHTYEAR%",
+			  "OriginalFilename": "%FILENAME%.exe",
+			  "ProductName": "Bitfocus Listener",
+			  "ProductVersion": "%VERSION%"
+			}
+		  }
+		],
+		"Translations": [
+		  {
+			"Language": "0409",
+			"Charset": "04b0"
+		  }
+		]
+	  }
+	]
+  }

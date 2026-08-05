@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>LSUIElement</key>
+    <true/>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>bitfocus-listener</string>
+    <key>CFBundleIdentifier</key>
+    <string>io.bitfocus.listener</string>
+    <key>CFBundleGetInfoString</key>
+    <string>Bitfocus Listener %VERSION%</string>
+    <key>CFBundleVersion</key>
+    <string>%VERSION%</string>
+    <key>CFBundleShortVersionString</key>
+    <string>%SHORTVERSION%</string>
+    <key>CFBundleIconFile</key>
+    <string>Icon</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
+    <key>MinimumOSVersion</key>
+    <string>13</string>
+    <key>HumanReadableCopyright</key>
+    <string>© Copyright %YEAR% Bitfocus AS</string>
+    <key>CFBundleShortVersionString</key>
+    <string>%SHORTVERSION%</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>LSArchitecturePriority</key>
+    <array>
+        <string>%ARCH%</string>
+    </array>
+    <key>LSRequiresNativeExecution</key>
+    <true/>
+  </dict>
+</plist>

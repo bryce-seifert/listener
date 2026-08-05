@@ -1,0 +1,274 @@
+name: Build binaries
+on: [push]
+
+permissions:
+  contents: read
+
+env:
+  API_PRODUCT: listener
+
+jobs:
+  osx-arm64:
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Use Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check version matches tag
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: tools/check-tag-version.sh
+
+      - name: Setup keychain
+        if: ${{ github.repository_owner == 'bitfocus' }}
+        env:
+          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
+        run: tools/CI-keychain.sh
+
+      - name: build & package
+        id: build
+        env:
+          BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || '' }}
+          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLEID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLETEAMID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLEIDPASS }}
+        run: |
+          tools/build.sh mac ARM64
+          tools/make-mac-app.sh arm64
+
+      - name: Determine files to upload
+        id: filenames
+        shell: bash
+        run: |
+          mv build/bitfocus-listener.dmg "build/${{ steps.build.outputs.OUTPUT_FILENAME }}"
+          echo "sourcename=build/${{ steps.build.outputs.OUTPUT_FILENAME }}" >> $GITHUB_OUTPUT
+          echo "targetname=${{ steps.build.outputs.OUTPUT_FILENAME }}" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: ${{ steps.filenames.outputs.sourcename }}
+          retention-days: 1
+      - name: Upload build (beta)
+        uses: bitfocus/actions/upload-and-notify-for-branch@main
+        if: ${{ github.repository_owner == 'bitfocus' && github.ref == 'refs/heads/main' }}
+        with:
+          source-filename: ${{ steps.filenames.outputs.sourcename }}
+          destination-filename: ${{ steps.filenames.outputs.targetname }}
+          s3-host: ${{ vars.S3_HOST }}
+          s3-bucket: ${{ vars.S3_BUCKET }}/${{ env.API_PRODUCT }}
+          s3-access-key: ${{ secrets.S3_KEY }}
+          s3-secret-key: ${{ secrets.S3_SECRET }}
+
+          api-version: ${{ steps.build.outputs.VERSION }}
+          api-branch: "beta"
+          api-product: ${{ env.API_PRODUCT }}
+          api-target: "mac-arm"
+          api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}
+      - name: Upload build (stable)
+        uses: bitfocus/actions/upload-and-notify-for-branch@main
+        if: ${{ github.repository_owner == 'bitfocus' && startsWith(github.ref, 'refs/tags/') }}
+        with:
+          source-filename: ${{ steps.filenames.outputs.sourcename }}
+          destination-filename: ${{ steps.filenames.outputs.targetname }}
+          s3-host: ${{ vars.RELEASE_S3_HOST }}
+          s3-bucket: ${{ vars.RELEASE_S3_BUCKET }}/${{ env.API_PRODUCT }}
+          s3-access-key: ${{ secrets.RELEASE_S3_KEY }}
+          s3-secret-key: ${{ secrets.RELEASE_S3_SECRET }}
+
+          public-bucket-url: ${{ vars.RELEASE_S3_URL }}/${{ env.API_PRODUCT }}
+
+          api-version: ${{ github.ref_name }}
+          api-branch: "stable"
+          api-product: ${{ env.API_PRODUCT }}
+          api-target: "mac-arm"
+          api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}
+
+  osx-x64:
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Use Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check version matches tag
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: tools/check-tag-version.sh
+
+      - name: Setup keychain
+        if: ${{ github.repository_owner == 'bitfocus' }}
+        env:
+          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
+        run: tools/CI-keychain.sh
+
+      - name: build & package
+        id: build
+        env:
+          BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || '' }}
+          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLEID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLETEAMID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLEIDPASS }}
+        run: |
+          tools/build.sh mac X64
+          tools/make-mac-app.sh amd64
+
+      - name: Determine files to upload
+        id: filenames
+        shell: bash
+        run: |
+          mv build/bitfocus-listener.dmg "build/${{ steps.build.outputs.OUTPUT_FILENAME }}"
+          echo "sourcename=build/${{ steps.build.outputs.OUTPUT_FILENAME }}" >> $GITHUB_OUTPUT
+          echo "targetname=${{ steps.build.outputs.OUTPUT_FILENAME }}" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: ${{ steps.filenames.outputs.sourcename }}
+          retention-days: 1
+      - name: Upload build (beta)
+        uses: bitfocus/actions/upload-and-notify-for-branch@main
+        if: ${{ github.repository_owner == 'bitfocus' && github.ref == 'refs/heads/main' }}
+        with:
+          source-filename: ${{ steps.filenames.outputs.sourcename }}
+          destination-filename: ${{ steps.filenames.outputs.targetname }}
+          s3-host: ${{ vars.S3_HOST }}
+          s3-bucket: ${{ vars.S3_BUCKET }}/${{ env.API_PRODUCT }}
+          s3-access-key: ${{ secrets.S3_KEY }}
+          s3-secret-key: ${{ secrets.S3_SECRET }}
+
+          api-version: ${{ steps.build.outputs.VERSION }}
+          api-branch: "beta"
+          api-product: ${{ env.API_PRODUCT }}
+          api-target: "mac-intel"
+          api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}
+      - name: Upload build (stable)
+        uses: bitfocus/actions/upload-and-notify-for-branch@main
+        if: ${{ github.repository_owner == 'bitfocus' && startsWith(github.ref, 'refs/tags/') }}
+        with:
+          source-filename: ${{ steps.filenames.outputs.sourcename }}
+          destination-filename: ${{ steps.filenames.outputs.targetname }}
+          s3-host: ${{ vars.RELEASE_S3_HOST }}
+          s3-bucket: ${{ vars.RELEASE_S3_BUCKET }}/${{ env.API_PRODUCT }}
+          s3-access-key: ${{ secrets.RELEASE_S3_KEY }}
+          s3-secret-key: ${{ secrets.RELEASE_S3_SECRET }}
+
+          public-bucket-url: ${{ vars.RELEASE_S3_URL }}/${{ env.API_PRODUCT }}
+
+          api-version: ${{ github.ref_name }}
+          api-branch: "stable"
+          api-product: ${{ env.API_PRODUCT }}
+          api-target: "mac-intel"
+          api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}
+
+  win32-x64:
+    # Signed Windows builds need the Bitfocus code-signing token, which only
+    # exists on the self-hosted 'codecert' runner. Everything else (forks, PRs,
+    # ordinary pushes) builds unsigned on a GitHub-hosted runner.
+    runs-on: ${{ (startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[build-signed]')) && fromJSON('["self-hosted", "Windows", "codecert", "X64"]') || 'windows-latest' }}
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Use Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check version matches tag
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        shell: bash
+        run: tools/check-tag-version.sh
+
+      - name: build & package
+        id: build
+        shell: bash
+        env:
+          BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || '' }}
+          CGO_ENABLED: '1'
+        run: tools/build.sh windows X64
+
+      - name: sign executables
+        if: ${{ runner.environment == 'self-hosted' }}
+        shell: pwsh
+        env:
+          CSC_LINK: c:\actions-runner-bitfocusas\codesign.cer
+          BF_CODECERT_KEY: ${{ secrets.BF_CODECERT_KEY }}
+        run: |
+          Get-ChildItem -Path "./build" -Filter *.exe | ForEach-Object {
+            .\tools\sign.ps1 $_.FullName -Description "Bitfocus Listener"
+          }
+
+      - name: Determine files to upload
+        id: filenames
+        shell: bash
+        run: |
+          mv build bitfocus-listener
+          tar -czf "${{ steps.build.outputs.OUTPUT_FILENAME }}.tar.gz" bitfocus-listener
+          echo "sourcename=${{ steps.build.outputs.OUTPUT_FILENAME }}.tar.gz" >> $GITHUB_OUTPUT
+          echo "targetname=${{ steps.build.outputs.OUTPUT_FILENAME }}.tar.gz" >> $GITHUB_OUTPUT
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: ${{ steps.filenames.outputs.sourcename }}
+          retention-days: 1
+      - name: Upload build (beta)
+        uses: bitfocus/actions/upload-and-notify-for-branch@main
+        if: ${{ github.repository_owner == 'bitfocus' && github.ref == 'refs/heads/main' }}
+        with:
+          source-filename: ${{ steps.filenames.outputs.sourcename }}
+          destination-filename: ${{ steps.filenames.outputs.targetname }}
+          s3-host: ${{ vars.S3_HOST }}
+          s3-bucket: ${{ vars.S3_BUCKET }}/${{ env.API_PRODUCT }}
+          s3-access-key: ${{ secrets.S3_KEY }}
+          s3-secret-key: ${{ secrets.S3_SECRET }}
+
+          api-version: ${{ steps.build.outputs.VERSION }}
+          api-branch: "beta"
+          api-product: ${{ env.API_PRODUCT }}
+          api-target: "win-x64"
+          api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}
+      - name: Upload build (stable)
+        uses: bitfocus/actions/upload-and-notify-for-branch@main
+        if: ${{ github.repository_owner == 'bitfocus' && startsWith(github.ref, 'refs/tags/') }}
+        with:
+          source-filename: ${{ steps.filenames.outputs.sourcename }}
+          destination-filename: ${{ steps.filenames.outputs.targetname }}
+          s3-host: ${{ vars.RELEASE_S3_HOST }}
+          s3-bucket: ${{ vars.RELEASE_S3_BUCKET }}/${{ env.API_PRODUCT }}
+          s3-access-key: ${{ secrets.RELEASE_S3_KEY }}
+          s3-secret-key: ${{ secrets.RELEASE_S3_SECRET }}
+
+          public-bucket-url: ${{ vars.RELEASE_S3_URL }}/${{ env.API_PRODUCT }}
+
+          api-version: ${{ github.ref_name }}
+          api-branch: "stable"
+          api-product: ${{ env.API_PRODUCT }}
+          api-target: "win-x64"
+          api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}

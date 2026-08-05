@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+	Listener is signed with the hardened runtime and requires no entitlements.
+
+	It is a statically linked Go binary that only links Apple system frameworks
+	(Cocoa, CoreGraphics, ApplicationServices, and OpenGL via Fyne/GLFW). It does
+	not JIT, does not load third-party dylibs at runtime, and does not need a
+	debugger attached.
+
+	Do not add hardened-runtime exceptions here without a concrete, demonstrated
+	need. This process holds an Accessibility TCC grant, so it can synthesise
+	input across the entire system. Exceptions such as get-task-allow,
+	allow-dyld-environment-variables, disable-library-validation,
+	allow-unsigned-executable-memory and disable-executable-page-protection each
+	turn that grant into a local privilege-escalation path: they let another
+	local process attach to, inject into, or replace code inside a binary that
+	can type on the user's behalf.
+-->
+<plist version="1.0">
+	<dict/>
+</plist>
