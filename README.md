@@ -6,8 +6,8 @@ click the mouse, open files, run shell commands, and stream basic system
 metrics. It is written in Go with a [Fyne](https://fyne.io/) GUI for
 configuration, and runs in the system tray / menu bar.
 
-It was built by [Bitfocus AS](https://bitfocus.io) to drive machines from
-[Companion](https://bitfocus.io/companion) modules and other automation, and is
+It was built by [Bitfocus AS](https://bitfocus.io) to remote control machines from
+[Bitfocus Buttons](https://bitfocus.io/buttons) modules and other automation, and is
 released under the MIT License.
 
 > [!WARNING]
@@ -183,7 +183,7 @@ hand. `version.json` holds the version number, and production tags must match it
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports go to
-security@bitfocus.io — see [SECURITY.md](SECURITY.md).
+domains@bitfocus.io — see [SECURITY.md](SECURITY.md).
 
 ## License
 
