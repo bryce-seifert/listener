@@ -27,11 +27,14 @@ if [[ -z "$CSC_KEY_PASSWORD" ]]; then
 	exit 1
 fi
 
-CERTFILE="$(mktemp -t listener-cert)"
+# The .p12 extension matters: `security import` guesses the format from it, and
+# gives an unhelpful "Unknown format in import" for an extensionless file.
+CERTDIR="$(mktemp -d)"
+CERTFILE="$CERTDIR/certificate.p12"
 KEYCHAIN=build.keychain
 KEYCHAINFILE=$HOME/Library/Keychains/$KEYCHAIN-db
 
-trap 'rm -f "$CERTFILE"' EXIT
+trap 'rm -rf "$CERTDIR"' EXIT
 
 if [[ -e "$KEYCHAINFILE" ]]; then
 	log "Removing existing keychainfile $KEYCHAIN"
@@ -44,9 +47,18 @@ security list-keychains -d user -s "$KEYCHAIN" login.keychain
 security set-keychain-settings -lut 21600 "$KEYCHAIN" # No interactive unlock for the next 6 hours
 security unlock-keychain -p "$CSC_KEY_PASSWORD" "$KEYCHAIN"
 
+log "Decoding signing certificate"
+# Whitespace is stripped first, so a secret stored with line wrapping still decodes.
+echo "$CSC_LINK" | tr -d '[:space:]' | base64 -D >"$CERTFILE" || error "CSC_LINK is not valid base64; it must be a base64-encoded .p12 certificate"
+
+# A PKCS#12 file is DER, so it always starts with a SEQUENCE tag (0x30). Checking
+# this gives a usable error instead of 'Unknown format in import' from security.
+if [ "$(head -c 1 "$CERTFILE" | od -An -tx1 | tr -d '[:space:]')" != "30" ]; then
+	error "CSC_LINK did not decode to a .p12 certificate. electron-builder also accepts a path or url there; this script needs the base64 of the certificate itself."
+fi
+
 log "Importing signing certificate to keychain"
-echo "$CSC_LINK" | base64 -D >"$CERTFILE"
-security import "$CERTFILE" -k "$KEYCHAIN" -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+security import "$CERTFILE" -k "$KEYCHAIN" -f pkcs12 -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign || error "Failed to import signing certificate to keychain"
 
 log "Make sure signing tools can be used without user interaction"
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$CSC_KEY_PASSWORD" "$KEYCHAIN"
