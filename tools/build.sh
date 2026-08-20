@@ -35,6 +35,7 @@ case $PLATFORM in
 	windows)
 		NAME="$PROGRAM-win"
 		EXT="exe"
+		BINARY="$PROGRAM.exe"
 		export GOOS=windows
 		export EXTRAFLAGS="-ldflags -H=windowsgui"
 		API_TARGET="win"
@@ -42,6 +43,7 @@ case $PLATFORM in
 	mac)
 		NAME="$PROGRAM-mac"
 		EXT="dmg"
+		BINARY="$PROGRAM"
 		API_TARGET="mac"
 		export GOOS=darwin
 		export MACOSX_DEPLOYMENT_TARGET=14
@@ -118,7 +120,9 @@ if [ "$PLATFORM" = "windows" ]; then
 fi
 
 log "Building $(_yellow $PROGRAM) for $(_yellow $PLATFORM)/$(_yellow $ARCH)"
-go build -v $EXTRAFLAGS -o $__DIRNAME/../build . >"$BUILDLOG" 2>&1 || error "Failed to build ${PROGRAM}: $(cat "$BUILDLOG")"
+# The output filename is given explicitly: `-o <dir>` would name the binary after
+# the module path (listener), but the app bundle and resources expect $PROGRAM.
+go build -v $EXTRAFLAGS -o "$__DIRNAME/../build/$BINARY" . >"$BUILDLOG" 2>&1 || error "Failed to build ${PROGRAM}: $(cat "$BUILDLOG")"
 rm -f "$BUILDLOG"
 
 log "Built application"
