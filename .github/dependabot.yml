@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Labels on pull requests for security and version updates
+    labels:
+      - "type/dependencies"
+    # Disable version updates for go dependencies (we only want security updates)
+    open-pull-requests-limit: 0
