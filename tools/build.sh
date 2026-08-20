@@ -78,8 +78,10 @@ if [ "$BRANCH" == "stable" ]; then
 	# example: bitfocus-listener-mac-x64-1.0.0.dmg"
 	FILENAME="$FILENAME-$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH.$EXT"
 else
-	# example: bitfocus-listener-mac-x64-1.0.0+37-stable-cec1269c.dmg
-	FILENAME="$FILENAME-$VERSION.$EXT"
+	# example: bitfocus-listener-mac-x64-1.0.0-37-main-cec1269c.dmg
+	# The + from the version is replaced with -, because the upload action
+	# rewrites it in the s3 key and url but reports the raw filename to the api.
+	FILENAME="$FILENAME-${VERSION//+/-}.$EXT"
 fi
 
 export CGO_ENABLED=1
@@ -94,6 +96,11 @@ export ICONDIR="$__DIRNAME/extras/"
 # Generate syso file for Windows
 if [ "$PLATFORM" = "windows" ]; then
 	log Creating resource file for Windows
+	# syso is a native Windows binary and cannot open the msys style paths that
+	# readlink -f produces under Git Bash, so translate it first.
+	if command -v cygpath >/dev/null 2>&1; then
+		ICONDIR="$(cygpath -m "$ICONDIR")"
+	fi
 	sed -e "s/%FILENAME%/$PROGRAM/g" \
 		-e "s/%VERSION%/$WIN_VERSION/g" \
 		-e "s|%ICONDIR%|$ICONDIR|g" \

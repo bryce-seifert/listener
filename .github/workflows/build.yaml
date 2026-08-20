@@ -1,5 +1,5 @@
 name: Build binaries
-on: [push]
+on: [push, pull_request]
 
 permissions:
   contents: read
@@ -9,8 +9,16 @@ env:
 
 jobs:
   osx-arm64:
+    # Pull requests from inside the repository are already covered by the push
+    # build, so only build the fork ones.
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: macos-26
     timeout-minutes: 60
+    env:
+      # Job level so the steps below can test whether signing is possible; the
+      # secrets context is not available in a step level `if`.
+      CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v7
@@ -18,7 +26,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Use Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -27,18 +35,13 @@ jobs:
         run: tools/check-tag-version.sh
 
       - name: Setup keychain
-        if: ${{ github.repository_owner == 'bitfocus' }}
-        env:
-          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
+        if: ${{ github.repository_owner == 'bitfocus' && env.CSC_LINK != '' }}
         run: tools/CI-keychain.sh
 
       - name: build & package
         id: build
         env:
           BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || '' }}
-          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLEID }}
           APPLE_TEAM_ID: ${{ secrets.APPLETEAMID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLEIDPASS }}
@@ -96,8 +99,12 @@ jobs:
           api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}
 
   osx-x64:
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: macos-26
     timeout-minutes: 60
+    env:
+      CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v7
@@ -105,7 +112,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Use Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -114,18 +121,13 @@ jobs:
         run: tools/check-tag-version.sh
 
       - name: Setup keychain
-        if: ${{ github.repository_owner == 'bitfocus' }}
-        env:
-          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
+        if: ${{ github.repository_owner == 'bitfocus' && env.CSC_LINK != '' }}
         run: tools/CI-keychain.sh
 
       - name: build & package
         id: build
         env:
           BRANCH: ${{ startsWith(github.ref, 'refs/tags/') && 'stable' || '' }}
-          CSC_LINK: ${{ secrets.OSX_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.OSX_CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLEID }}
           APPLE_TEAM_ID: ${{ secrets.APPLETEAMID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLEIDPASS }}
@@ -183,10 +185,12 @@ jobs:
           api-secret: ${{ secrets.BITFOCUS_API_PROJECT_SECRET }}
 
   win32-x64:
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     # Signed Windows builds need the Bitfocus code-signing token, which only
-    # exists on the self-hosted 'codecert' runner. Everything else (forks, PRs,
-    # ordinary pushes) builds unsigned on a GitHub-hosted runner.
-    runs-on: ${{ (startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[build-signed]')) && fromJSON('["self-hosted", "Windows", "codecert", "X64"]') || 'windows-latest' }}
+    # exists on the self-hosted 'codecert' runner, so it is reserved for tags and
+    # opted in pushes. Everything else (forks, pull requests, ordinary pushes)
+    # builds unsigned on a GitHub-hosted runner.
+    runs-on: ${{ (github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[build-signed]'))) && fromJSON('["self-hosted", "Windows", "codecert", "X64"]') || 'windows-latest' }}
     timeout-minutes: 60
 
     steps:
@@ -195,7 +199,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Use Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
